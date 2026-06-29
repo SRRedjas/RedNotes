@@ -11,10 +11,13 @@
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Tags')" class="grid">
+                <flux:sidebar.group :heading="__('Panels')" class="grid">
                     
                     <flux:sidebar.item icon="tag" :href="route('tags')" :current="request()->routeIs('tags')" wire:navigate>
                         {{ __('Tags') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="pencil-square" :href="route('notes')" :current="request()->routeIs('notes')" wire:navigate>
+                        {{ __('Notes') }}
                     </flux:sidebar.item>
                     
                     <livewire:notes.sidebar />

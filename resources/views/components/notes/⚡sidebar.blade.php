@@ -41,8 +41,6 @@ new class extends Component
         <flux:button variant="ghost" align="start" icon:trailing="arrow-top-right-on-square" :href="route('notes.show', $note)" wire:navigate>
             {{ $note->title }}
         </flux:button>
-
-
         @endforeach
 
     </flux:sidebar.group>
