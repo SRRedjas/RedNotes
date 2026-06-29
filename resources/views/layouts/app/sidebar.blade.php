@@ -11,24 +11,19 @@
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
+                <flux:sidebar.group :heading="__('Tags')" class="grid">
+                    
+                    <flux:sidebar.item icon="tag" :href="route('tags')" :current="request()->routeIs('tags')" wire:navigate>
+                        {{ __('Tags') }}
                     </flux:sidebar.item>
+                    
+                    <livewire:notes.sidebar />
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
 
-            <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
-                </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
-                </flux:sidebar.item>
-            </flux:sidebar.nav>
+            
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
@@ -95,6 +90,8 @@
                 <flux:toast />
             </flux:toast.group>
         @endpersist
+
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         @fluxScripts
     </body>

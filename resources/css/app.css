@@ -64,3 +64,15 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/*
+ * Pin the EasyMDE editor to a system monospace font. EasyMDE sets
+ * `.CodeMirror { font: inherit }`, which pulls in the app's async-loaded
+ * `--font-sans` (Instrument Sans). CodeMirror measures glyphs before that
+ * webfont swaps in, leaving stale metrics (caret drift + phantom top gap on
+ * notes opened with content). A system monospace loads instantly = no swap.
+ */
+.EasyMDEContainer .CodeMirror {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+

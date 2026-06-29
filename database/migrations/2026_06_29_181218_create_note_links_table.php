@@ -11,17 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('notes', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-            $table->string('title');
-            $table->text('content')->nullable();
-            $table->foreignId('user_id')->constrained();
-            
-
-
-
-
+        Schema::create('note_links', function (Blueprint $table) {
+            $table->foreignId('source_note_id')->constrained('notes')->cascadeOnDelete();
+            $table->foreignId('target_note_id')->constrained('notes')->cascadeOnDelete();
+            $table->primary(['source_note_id', 'target_note_id']);
         });
     }
 
@@ -30,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('notes');
+        Schema::dropIfExists('note_links');
     }
 };
