@@ -76,3 +76,48 @@ select:focus[data-flux-control] {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
+/* ── EasyMDE dark-mode overrides ──────────────────────────────────────────── */
+
+.dark .EasyMDEContainer .editor-toolbar {
+    background-color: var(--color-zinc-800);
+    border-color: var(--color-zinc-700);
+}
+
+.dark .EasyMDEContainer .editor-toolbar button {
+    color: var(--color-zinc-300);
+}
+
+.dark .EasyMDEContainer .editor-toolbar button:hover,
+.dark .EasyMDEContainer .editor-toolbar button.active {
+    background-color: var(--color-zinc-700);
+    border-color: var(--color-zinc-600);
+}
+
+.dark .EasyMDEContainer .editor-toolbar i.separator {
+    border-color: var(--color-zinc-600);
+}
+
+.dark .EasyMDEContainer .CodeMirror {
+    background-color: var(--color-zinc-900);
+    color: var(--color-zinc-100);
+    border-color: var(--color-zinc-700);
+}
+
+.dark .EasyMDEContainer .CodeMirror-cursor {
+    border-left-color: var(--color-zinc-100);
+}
+
+.dark .EasyMDEContainer .CodeMirror-selected,
+.dark .EasyMDEContainer .CodeMirror-line::selection,
+.dark .EasyMDEContainer .CodeMirror-line > span::selection,
+.dark .EasyMDEContainer .CodeMirror-line > span > span::selection {
+    background-color: var(--color-zinc-700);
+}
+
+.dark .EasyMDEContainer .editor-preview,
+.dark .EasyMDEContainer .editor-preview-side {
+    background-color: var(--color-zinc-900);
+    color: var(--color-zinc-100);
+    border-color: var(--color-zinc-700);
+}
+
