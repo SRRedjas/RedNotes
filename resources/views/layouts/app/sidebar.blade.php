@@ -19,8 +19,12 @@
                     <flux:sidebar.item icon="pencil-square" :href="route('notes')" :current="request()->routeIs('notes')" wire:navigate>
                         {{ __('Notes') }}
                     </flux:sidebar.item>
-                    
+                    <flux:sidebar.item icon="book-open" :href="route('wiki')" :current="request()->routeIs('wiki')" wire:navigate>
+                        {{ __('Wiki') }}
+                    </flux:sidebar.item>
+
                     <livewire:notes.sidebar />
+                    <livewire:wiki.sidebar />
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

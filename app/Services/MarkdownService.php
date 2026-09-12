@@ -50,32 +50,37 @@ class MarkdownService
             ->all();
     }
 
-    /**
-     * Render markdown content to safe HTML, turning [[wikilinks]] into note
-     * links and #tags into tag links before handing off to CommonMark.
-     */
+ 
     public function toHtml(string $content, ?int $userId = null): string
     {
-        $userId ??= auth()->id();
+        $userId = $userId ?? (int) auth()->id();
 
-        // title => id map for the user's notes (last wins on duplicate titles).
-        $notesByTitle = Note::query()
-            ->where('user_id', $userId)
-            ->pluck('id', 'title');
+        
+        $notes = Note::query()
+            ->visibleTo($userId)
+            ->get(['id', 'title', 'slug', 'visibility'])
+            ->keyBy('title');
 
-        $content = preg_replace_callback(self::WIKILINK, function (array $m) use ($notesByTitle) {
+        $content = preg_replace_callback(self::WIKILINK, function (array $m) use ($notes) {
             $title = trim($m[1]);
-            $id = $notesByTitle[$title] ?? null;
+            $note = $notes[$title] ?? null;
 
-            return $id
-                ? '[' . $title . '](' . url('/notes/' . $id) . ')'
-                : '[' . $title . '](' . url('/notes') . ')';
+            return $note
+                ? '['.$title.']('.url($this->pathFor($note)).')'
+                : '['.$title.']('.url('/notes').')';
         }, $content);
 
         $content = preg_replace_callback(self::TAG, function (array $m) {
-            return '[#' . $m[1] . '](' . url('/tags') . ')';
+            return '[#'.$m[1].']('.url('/tags').')';
         }, $content);
 
         return Str::markdown($content);
+    }
+
+    private function pathFor(Note $note): string
+    {
+        return $note->visibility === 'public'
+            ? '/wiki/'.$note->slug
+            : '/notes/'.$note->slug;
     }
 }

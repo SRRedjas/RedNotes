@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Tag extends Model
 {
-    protected $fillable = ["name", "description", "color", "user_id"];
+    protected $fillable = ['name', 'description', 'color', 'user_id', 'visibility'];
 
     public function user(): BelongsTo
     {

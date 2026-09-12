@@ -1,26 +1,32 @@
 <?php
 
-use Livewire\Component;
 use App\Models\Note;
-use App\Services\NoteService;
 use App\Services\MarkdownService;
+use App\Services\NoteService;
 use Jantinnerezo\LivewireAlert\Facades\LivewireAlert;
+use Livewire\Component;
 
 new class extends Component
 {
     public int $noteId;
+
     public string $title = '';
+
     public ?string $content = '';
-    public string $visibility = 'private';
+
+    public string $visibility = 'public';
+
+    public bool $isOwner = false;
 
     public function mount(string $slug): void
     {
-        $note = Note::where('user_id', auth()->id())->where('slug', $slug)->firstOrFail();
+        $note = Note::where('visibility', 'public')->where('slug', $slug)->firstOrFail();
 
-        $this->noteId    = $note->id;
-        $this->title     = $note->title;
-        $this->content   = $note->content ?? '';
+        $this->noteId = $note->id;
+        $this->title = $note->title;
+        $this->content = $note->content ?? '';
         $this->visibility = $note->visibility;
+        $this->isOwner = $note->user_id === auth()->id();
     }
 
     public function save(NoteService $service): void
@@ -28,22 +34,28 @@ new class extends Component
         $note = Note::findOrFail($this->noteId);
         $previousSlug = $note->slug;
 
-        $service->updateNote($note, [
-            'title'      => $this->title,
-            'content'    => $this->content,
-            'visibility' => $this->visibility,
+        $saved = $service->updateNote($note, [
+            'title' => $this->title,
+            'content' => $this->content,
+            'visibility' => $this->isOwner ? $this->visibility : null,
         ]);
 
-        LivewireAlert::title(__('Note saved'))
+        abort_unless($saved, 403);
+
+        LivewireAlert::title(__('Page saved'))
             ->success()
             ->toast()
             ->position('top-end')
             ->timer(2500)
             ->show();
 
-        // Renaming a page changes its slug, so follow it to the new URL.
-        if ($note->slug !== $previousSlug) {
-            $this->redirect(route('notes.show', $note), navigate: true);
+        // Renaming a page changes its slug, or the owner made it private,
+        // so follow it to wherever it lives now.
+        if ($note->slug !== $previousSlug || $note->visibility !== 'public') {
+            $this->redirect(
+                $note->visibility === 'public' ? route('wiki.show', $note) : route('notes.show', $note),
+                navigate: true,
+            );
         }
     }
 
@@ -51,7 +63,7 @@ new class extends Component
     {
         $service->deleteNote(Note::findOrFail($this->noteId));
 
-        return $this->redirect(route('notes'), navigate: true);
+        return $this->redirect(route('wiki'), navigate: true);
     }
 
     public function with(): array
@@ -59,8 +71,8 @@ new class extends Component
         $note = Note::with('backlinks')->findOrFail($this->noteId);
 
         return [
-            'html'      => app(MarkdownService::class)->toHtml($this->content ?? ''),
-            'backlinks' => $note->backlinks,
+            'html' => app(MarkdownService::class)->toHtml($this->content ?? ''),
+            'backlinks' => $note->backlinks()->visibleTo(auth()->id())->get(),
         ];
     }
 };
@@ -74,10 +86,12 @@ new class extends Component
         <flux:input wire:model="title" class="max-w-md" placeholder="{{ __('Title') }}" />
 
         <div class="flex items-center gap-2">
-            <flux:select wire:model="visibility" size="sm" class="max-w-40">
-                <flux:select.option value="private">{{ __('Private') }}</flux:select.option>
-                <flux:select.option value="public">{{ __('Public (wiki)') }}</flux:select.option>
-            </flux:select>
+            @if ($isOwner)
+                <flux:select wire:model="visibility" size="sm" class="max-w-40">
+                    <flux:select.option value="public">{{ __('Public (wiki)') }}</flux:select.option>
+                    <flux:select.option value="private">{{ __('Private') }}</flux:select.option>
+                </flux:select>
+            @endif
             <flux:button size="sm" variant="ghost" x-on:click="mode = 'edit'">{{ __('Edit') }}</flux:button>
             <flux:button size="sm" variant="ghost"
                          x-on:click="$wire.set('content', (editor && editor.value() !== null) ? editor.value() : @js($content)).then(() => mode = 'view')">
@@ -86,9 +100,11 @@ new class extends Component
             <flux:button size="sm" variant="primary" color="red" icon="check" wire:click="save">
                 {{ __('Save') }}
             </flux:button>
-            <flux:button size="sm" variant="ghost" icon="trash"
-                         wire:click="delete"
-                         wire:confirm="{{ __('Delete this note?') }}" />
+            @if ($isOwner)
+                <flux:button size="sm" variant="ghost" icon="trash"
+                             wire:click="delete"
+                             wire:confirm="{{ __('Delete this page?') }}" />
+            @endif
         </div>
     </div>
 
@@ -112,12 +128,12 @@ new class extends Component
 
         @forelse($backlinks as $backlink)
             <div class="py-1">
-                <flux:link :href="route('notes.show', $backlink)" wire:navigate>
+                <flux:link :href="route($backlink->visibility === 'public' ? 'wiki.show' : 'notes.show', $backlink)" wire:navigate>
                     {{ $backlink->title }}
                 </flux:link>
             </div>
         @empty
-            <flux:text>{{ __('No notes link here yet.') }}</flux:text>
+            <flux:text>{{ __('No pages link here yet.') }}</flux:text>
         @endforelse
     </div>
 </div>

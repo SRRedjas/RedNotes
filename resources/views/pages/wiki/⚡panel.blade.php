@@ -1,33 +1,50 @@
 <?php
 
-use Livewire\Component;
+use App\Models\Note;
 use App\Services\NoteService;
+use Livewire\Component;
 
 new class extends Component
 {
     public string $search = '';
 
+    public function create(NoteService $service)
+    {
+        $note = $service->createNote(auth()->user(), [
+            'title' => __('Untitled'),
+            'content' => '',
+            'visibility' => 'public',
+        ]);
+
+        return $this->redirect(route('wiki.show', $note), navigate: true);
+    }
+
     public function with()
     {
         return [
-            'notes' => auth()->user()->notes()->with('tags')->matching($this->search)->latest('updated_at')->get(),
+            'notes' => Note::with('tags', 'user')
+                ->where('visibility', 'public')
+                ->matching($this->search)
+                ->latest('updated_at')
+                ->get(),
         ];
     }
-
 };
 ?>
 
 <div>
-    {{-- An unexamined life is not worth living. - Socrates --}}
-
     <div class="flex items-center justify-between mb-6 gap-4">
-        <flux:heading size="xl">{{ __('Notes') }}</flux:heading>
-        <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" class="max-w-xs" placeholder="{{ __('Search notes...') }}" />
+        <flux:heading size="xl">{{ __('Wiki') }}</flux:heading>
+        <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" class="max-w-xs" placeholder="{{ __('Search wiki...') }}" />
+        <flux:button wire:click="create" icon="plus" variant="primary" color="red">
+            {{ __('New public page') }}
+        </flux:button>
     </div>
 
     <flux:table>
         <flux:table.columns>
             <flux:table.column>{{ __('Title') }}</flux:table.column>
+            <flux:table.column>{{ __('Author') }}</flux:table.column>
             <flux:table.column>{{ __('Tags') }}</flux:table.column>
             <flux:table.column>{{ __('Updated') }}</flux:table.column>
         </flux:table.columns>
@@ -35,9 +52,12 @@ new class extends Component
             @forelse($notes as $note)
                 <flux:table.row>
                     <flux:table.cell>
-                        <flux:link :href="route('notes.show', $note)" wire:navigate>
+                        <flux:link :href="route('wiki.show', $note)" wire:navigate>
                             {{ $note->title }}
                         </flux:link>
+                    </flux:table.cell>
+                    <flux:table.cell>
+                        {{ $note->user->name }}
                     </flux:table.cell>
                     <flux:table.cell>
                         <div class="flex flex-wrap gap-1">
@@ -54,8 +74,8 @@ new class extends Component
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="3">
-                        <flux:text>{{ __('No notes yet. Create your first one!') }}</flux:text>
+                    <flux:table.cell colspan="4">
+                        <flux:text>{{ __('No public pages yet. Create the first one!') }}</flux:text>
                     </flux:table.cell>
                 </flux:table.row>
             @endforelse
