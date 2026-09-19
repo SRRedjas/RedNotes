@@ -8,6 +8,8 @@ new class extends Component
 {
     public function create(NoteService $service)
     {
+        abort_unless(auth()->check(), 403);
+
         $note = $service->createNote(auth()->user(), [
             'title' => __('Untitled'),
             'content' => '',
@@ -27,9 +29,11 @@ new class extends Component
 <div>
     <flux:sidebar.group :heading="__('Wiki')" class="grid">
 
-        <flux:button wire:click="create" icon="plus" variant="subtle" align="start" :href="route('wiki')" :current="request()->routeIs('wiki')" wire:navigate>
-            {{ __('New') }}
-        </flux:button>
+        @auth
+            <flux:button wire:click="create" icon="plus" variant="subtle" align="start" :href="route('wiki')" :current="request()->routeIs('wiki')" wire:navigate>
+                {{ __('New') }}
+            </flux:button>
+        @endauth
 
         <x-notes.tree :nodes="$tree" route="wiki.show" />
 

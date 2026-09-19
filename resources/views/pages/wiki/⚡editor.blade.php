@@ -31,6 +31,8 @@ new class extends Component
 
     public function save(NoteService $service): void
     {
+        abort_unless(auth()->check(), 403);
+
         $note = Note::findOrFail($this->noteId);
         $previousSlug = $note->slug;
 
@@ -61,6 +63,8 @@ new class extends Component
 
     public function delete(NoteService $service)
     {
+        abort_unless(auth()->check(), 403);
+
         $service->deleteNote(Note::findOrFail($this->noteId));
 
         return $this->redirect(route('wiki'), navigate: true);
@@ -72,12 +76,27 @@ new class extends Component
 
         return [
             'html' => app(MarkdownService::class)->toHtml($this->content ?? ''),
-            'backlinks' => $note->backlinks()->visibleTo(auth()->id())->get(),
+            'backlinks' => $note->backlinks()->visibleTo((int) auth()->id())->get(),
         ];
     }
 };
 ?>
 
+<div>
+@guest
+    {{-- Read-only public view: no editor, no write actions. --}}
+    <div class="flex items-center justify-between gap-4 mb-4">
+        <flux:heading size="xl">{{ $title }}</flux:heading>
+
+        <flux:button size="sm" variant="ghost" :href="route('login')" wire:navigate>
+            {{ __('Log in to edit') }}
+        </flux:button>
+    </div>
+
+    <div class="prose dark:prose-invert max-w-none rounded-lg border border-zinc-200 dark:border-zinc-700 p-4">
+        {!! $html !!}
+    </div>
+@else
 <div x-data="{ mode: 'edit', editor: null }"
      x-effect="if (mode === 'edit' && editor) editor.refresh()">
 
@@ -121,6 +140,8 @@ new class extends Component
          class="prose dark:prose-invert max-w-none rounded-lg border border-zinc-200 dark:border-zinc-700 p-4">
         {!! $html !!}
     </div>
+</div>
+@endguest
 
     {{-- Backlinks / linked references --}}
     <div class="mt-8">

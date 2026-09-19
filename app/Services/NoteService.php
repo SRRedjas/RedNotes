@@ -78,12 +78,12 @@ class NoteService
 
     /**
      * Whether the current user may edit this note's content: the owner,
-     * or anyone (it's a public wiki page) may edit; only the owner may
-     * delete it or change its visibility.
+     * or any logged-in user (it's a public wiki page) may edit; only the
+     * owner may delete it or change its visibility. Guests may only read.
      */
     public function canEdit(Note $note): bool
     {
-        return $note->user_id === auth()->id() || $note->visibility === 'public';
+        return auth()->check() && ($note->user_id === auth()->id() || $note->visibility === 'public');
     }
 
     /**

@@ -10,6 +10,8 @@ new class extends Component
 
     public function create(NoteService $service)
     {
+        abort_unless(auth()->check(), 403);
+
         $note = $service->createNote(auth()->user(), [
             'title' => __('Untitled'),
             'content' => '',
@@ -36,9 +38,11 @@ new class extends Component
     <div class="flex items-center justify-between mb-6 gap-4">
         <flux:heading size="xl">{{ __('Wiki') }}</flux:heading>
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" class="max-w-xs" placeholder="{{ __('Search wiki...') }}" />
-        <flux:button wire:click="create" icon="plus" variant="primary" color="red">
-            {{ __('New public page') }}
-        </flux:button>
+        @auth
+            <flux:button wire:click="create" icon="plus" variant="primary" color="red">
+                {{ __('New public page') }}
+            </flux:button>
+        @endauth
     </div>
 
     <flux:table>
