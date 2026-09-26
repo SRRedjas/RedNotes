@@ -20,8 +20,8 @@ return new class extends Migration
 
         $this->backfillSlugs();
 
-        DB::statement('CREATE UNIQUE INDEX notes_private_slug_unique ON notes (user_id, slug) WHERE visibility = \'private\'');
-        DB::statement('CREATE UNIQUE INDEX notes_public_slug_unique ON notes (slug) WHERE visibility = \'public\'');
+        $this->addSlugScopes();
+        $this->addSlugIndexes();
     }
 
     /**
@@ -29,11 +29,57 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('DROP INDEX IF EXISTS notes_private_slug_unique');
-        DB::statement('DROP INDEX IF EXISTS notes_public_slug_unique');
+        // The indexes have to go before the generated columns they are built
+        // on: SQLite refuses to drop an indexed column.
+        Schema::table('notes', function (Blueprint $table) {
+            $table->dropUnique('notes_private_slug_unique');
+            $table->dropUnique('notes_public_slug_unique');
+        });
+
+        Schema::table('notes', function (Blueprint $table) {
+            $table->dropColumn(['private_slug_scope', 'public_slug_scope']);
+        });
 
         Schema::table('notes', function (Blueprint $table) {
             $table->dropColumn(['slug', 'visibility']);
+        });
+    }
+
+    /**
+     * Generated columns that carry the scope each slug has to be unique
+     * within: the owner's id for a private note, a constant for a public wiki
+     * page (they share one global namespace).
+     *
+     * They exist because the rule is conditional and MySQL, unlike SQLite and
+     * Postgres, has no partial ("WHERE ...") indexes. Each column is NULL for
+     * the rows its rule does not cover, and a unique index never enforces a
+     * key holding a NULL, so indexing these columns applies each rule to
+     * exactly the rows it belongs to. The columns are VIRTUAL (computed on
+     * read, no storage) because that is the only kind SQLite's ALTER TABLE
+     * accepts; MySQL indexes them just as happily as stored ones.
+     */
+    private function addSlugScopes(): void
+    {
+        Schema::table('notes', function (Blueprint $table) {
+            $table->unsignedBigInteger('private_slug_scope')
+                ->virtualAs("CASE WHEN visibility = 'private' THEN user_id END")
+                ->after('visibility');
+
+            $table->unsignedBigInteger('public_slug_scope')
+                ->virtualAs("CASE WHEN visibility = 'public' THEN 1 END")
+                ->after('private_slug_scope');
+        });
+    }
+
+    /**
+     * One unique index per scope. Kept in its own statement so the generated
+     * columns above are guaranteed to exist first on every driver.
+     */
+    private function addSlugIndexes(): void
+    {
+        Schema::table('notes', function (Blueprint $table) {
+            $table->unique(['private_slug_scope', 'slug'], 'notes_private_slug_unique');
+            $table->unique(['public_slug_scope', 'slug'], 'notes_public_slug_unique');
         });
     }
 
