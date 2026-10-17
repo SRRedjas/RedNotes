@@ -1,0 +1,33 @@
+1. Idea Central
+Escenario transaccional elegido
+¿Qué van a construir? ¿Por qué genera contención real por los mismos recursos?
+Un simulador simple de reserva de mesas en un restaurante con solo 3 mesas disponibles. Varios hilos
+representan clientes que intentan reservar una combinación de dos mesas a la vez (por ejemplo, para juntar
+grupos). Al haber pocas mesas y muchos hilos pidiéndolas casi al mismo tiempo, la contención por las
+mismas mesas es real y no necesita datos ni lógica de negocio complicada: basta un arreglo pequeño de
+recursos compartidos.
+Recursos compartidos y competencia
+¿Qué recursos compartidos existirán? ¿Qué hilos/procesos competirán por ellos?
+El recurso compartido es un pequeño conjunto fijo de 'mesas' (por ejemplo, Mesa 1, Mesa 2, Mesa 3), cada
+una representada por un lock en memoria. Compiten por ellas hilos trabajadores sencillos, cada uno
+necesitando tomar el lock de dos mesas distintas para completar su 'reserva' antes de liberarlas.
+Qué van a demostrar
+Describan la condición de carrera y el deadlock real que van a inyectar y detectar.
+Condición de carrera: sin sincronización, dos hilos que intentan marcar la misma mesa como 'ocupada' al
+mismo tiempo pueden pisar la actualización del otro, dejando una mesa marcada libre cuando en realidad
+está tomada. Esto se corrige con un lock por mesa. Deadlock: cuando el Hilo 1 pide Mesa 1 y luego Mesa
+2, mientras el Hilo 2 pide Mesa 2 y luego Mesa 1 casi al mismo tiempo, ambos se quedan esperando el lock
+que tiene el otro: una espera circular real, producida por el orden de las peticiones y no por un sleep()
+artificial.
+2. Explicación de Funcionamiento
+Entorno y mecanismo de sincronización
+Lenguaje y entorno de ejecución. ¿Semáforos, locks o monitores? Justificación.
+Python 3, ejecutado sobre hilos reales del sistema operativo (módulo threading) dentro de WSL. Se usará
+un lock simple (threading.Lock) por mesa, ya que cada mesa solo puede estar libre u ocupada (recurso
+binario); no se necesita semáforo con contador ni un monitor completo para algo tan sencillo.
+Diseño del "modo caótico" (espera circular)
+¿En qué orden pedirá cada hilo sus recursos para que la espera circular surja de la lógica del programa?
+Cada hilo 'cliente' recibe una lista fija de dos mesas a reservar, en un orden ya definido al crear el hilo (por
+ejemplo, Hilo 1 = [Mesa 1, Mesa 2], Hilo 2 = [Mesa 2, Mesa 1]) y simplemente toma los locks en ese orden,
+uno tras otro. Al lanzar varios hilos con órdenes cruzados al mismo tiempo, la espera circular aparece sola
+por cómo están definidas las listas, sin usar sleep() para forzarla

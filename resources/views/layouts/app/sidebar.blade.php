@@ -24,6 +24,9 @@
                     <flux:sidebar.item icon="book-open" :href="route('wiki')" :current="request()->routeIs('wiki')" wire:navigate>
                         {{ __('Wiki') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="code-bracket" :href="route('embeds')" :current="request()->routeIs('embeds')" wire:navigate>
+                        {{ __('Embeds') }}
+                    </flux:sidebar.item>
 
                     @auth
                         <livewire:notes.sidebar />

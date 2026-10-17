@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulador de Procesos</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    input {
+      margin: 5px;
+      padding: 5px;
+    }
+    table {
+      margin-top: 20px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: center;
+    }
+    #ramInfo {
+      margin-top: 15px;
+      max-width: 400px;
+    }
+    #ramBarContainer {
+      width: 100%;
+      height: 20px;
+      background: #ddd;
+      border: 1px solid #333;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #ramBar {
+      height: 100%;
+      width: 0%;
+      background: #4caf50;
+      transition: width 0.2s ease;
+    }
+    #ramBar.warning {
+      background: #ff9800;
+    }
+    #ramBar.full {
+      background: #f44336;
+    }
+    #ramTexto {
+      margin-top: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Simulador de Procesos</h1>
+
+  <input type="number" id="pid" placeholder="PID">
+  <input type="text" id="nombre" placeholder="Nombre">
+  <input type="number" id="memoria" placeholder="Memoria (MB)">
+  <input type="number" id="duracion" placeholder="Duración (seg)">
+  <button onclick="agregarProceso()">Agregar Proceso</button>
+
+  <div id="ramInfo">
+    <div id="ramBarContainer">
+      <div id="ramBar"></div>
+    </div>
+    <div id="ramTexto">RAM usada: 0 MB / 1024 MB &mdash; Disponible: 1024 MB</div>
+  </div>
+
+  <h2>Procesos en ejecución</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>PID</th>
+        <th>Nombre</th>
+        <th>Memoria</th>
+        <th>Duración</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody id="tablaProcesos"></tbody>
+  </table>
+
+  <h2>Cola de espera (sin RAM disponible)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>PID</th>
+        <th>Nombre</th>
+        <th>Memoria</th>
+        <th>Duración</th>
+      </tr>
+    </thead>
+    <tbody id="tablaCola"></tbody>
+  </table>
+
+  <script>
+    const RAM_LIMITE_MB = 1024;
+    let procesos = [];
+    let cola = [];
+
+    function ramUsada() {
+      return procesos.reduce(function(total, p) {
+        return total + Number(p.memoria);
+      }, 0);
+    }
+
+    function actualizarRam() {
+      const usada = ramUsada();
+      const disponible = RAM_LIMITE_MB - usada;
+      const porcentaje = Math.min((usada / RAM_LIMITE_MB) * 100, 100);
+
+      const barra = document.getElementById("ramBar");
+      barra.style.width = porcentaje + "%";
+      barra.classList.remove("warning", "full");
+      if (usada >= RAM_LIMITE_MB) {
+        barra.classList.add("full");
+      } else if (porcentaje >= 75) {
+        barra.classList.add("warning");
+      }
+
+      document.getElementById("ramTexto").textContent =
+        "RAM usada: " + usada + " MB / " + RAM_LIMITE_MB + " MB — Disponible: " + Math.max(disponible, 0) + " MB";
+    }
+
+    function agregarProceso() {
+      const pid = document.getElementById("pid").value;
+      const nombre = document.getElementById("nombre").value;
+      const memoria = document.getElementById("memoria").value;
+      const duracion = document.getElementById("duracion").value;
+
+      if (pid === "" || nombre === "" || memoria === "" || duracion === "") {
+        alert("Por favor completa todos los campos");
+        return;
+      }
+
+      const proceso = {
+        pid: pid,
+        nombre: nombre,
+        memoria: memoria,
+        duracion: duracion
+      };
+
+      const memoriaNum = Number(memoria);
+      if (cola.length > 0 || ramUsada() + memoriaNum > RAM_LIMITE_MB) {
+        cola.push(proceso);
+        console.log("Sin RAM disponible, proceso encolado:", proceso);
+      } else {
+        procesos.push(proceso);
+        iniciarTimeout(proceso);
+        console.log(procesos);
+      }
+
+      renderizarTabla();
+      renderizarCola();
+      actualizarRam();
+
+      document.getElementById("pid").value = "";
+      document.getElementById("nombre").value = "";
+      document.getElementById("memoria").value = "";
+      document.getElementById("duracion").value = "";
+    }
+
+    function iniciarTimeout(proceso) {
+      proceso.timeoutId = setTimeout(function() {
+        finalizarProceso(proceso.pid);
+      }, Number(proceso.duracion) * 1000);
+    }
+
+    function finalizarProceso(pid) {
+      procesos = procesos.filter(function(p) {
+        if (p.pid === pid) {
+          clearTimeout(p.timeoutId);
+          return false;
+        }
+        return true;
+      });
+      liberarCola();
+      renderizarTabla();
+      renderizarCola();
+      actualizarRam();
+    }
+
+    function liberarCola() {
+      while (cola.length > 0 && ramUsada() + Number(cola[0].memoria) <= RAM_LIMITE_MB) {
+        const proceso = cola.shift();
+        procesos.push(proceso);
+        iniciarTimeout(proceso);
+      }
+    }
+
+    function renderizarTabla() {
+      const tabla = document.getElementById("tablaProcesos");
+      tabla.innerHTML = "";
+
+      procesos.forEach(function(p) {
+        const fila = document.createElement("tr");
+        fila.innerHTML = "<td>" + p.pid + "</td>" +
+                          "<td>" + p.nombre + "</td>" +
+                          "<td>" + p.memoria + "</td>" +
+                          "<td>" + p.duracion + "</td>" +
+                          "<td><button onclick=\"finalizarProceso('" + p.pid + "')\">Finalizar</button></td>";
+        tabla.appendChild(fila);
+      });
+    }
+
+    function renderizarCola() {
+      const tabla = document.getElementById("tablaCola");
+      tabla.innerHTML = "";
+
+      cola.forEach(function(p) {
+        const fila = document.createElement("tr");
+        fila.innerHTML = "<td>" + p.pid + "</td>" +
+                          "<td>" + p.nombre + "</td>" +
+                          "<td>" + p.memoria + "</td>" +
+                          "<td>" + p.duracion + "</td>";
+        tabla.appendChild(fila);
+      });
+    }
+  </script>
+
+</body>
+</html> 

@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Embed;
 use App\Models\Note;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Str;
 
 class MarkdownService
@@ -17,6 +19,11 @@ class MarkdownService
      * Markdown headings ("# Title") are safe because they have a space after #.
      */
     private const TAG = '/(?<!\w)#([\p{L}\p{N}_-]+)/u';
+
+    /**
+     * Pattern for {{embed:slug}}, which drops an embedded HTML page in place.
+     */
+    private const EMBED = '\{\{\s*embed:([a-z0-9-]+)\s*\}\}';
 
     /**
      * Extract the unique titles referenced via [[...]] in the content.
@@ -50,12 +57,10 @@ class MarkdownService
             ->all();
     }
 
- 
     public function toHtml(string $content, ?int $userId = null): string
     {
         $userId = $userId ?? (int) auth()->id();
 
-        
         $notes = Note::query()
             ->visibleTo($userId)
             ->get(['id', 'title', 'slug', 'visibility'])
@@ -74,7 +79,33 @@ class MarkdownService
             return '[#'.$m[1].']('.url('/tags').')';
         }, $content);
 
-        return Str::markdown($content);
+        return $this->renderEmbeds(Str::markdown($content));
+    }
+
+    /**
+     * Swap each {{embed:slug}} for its sandboxed iframe. Runs on the rendered
+     * HTML, since Markdown escapes raw tags written in the content. Unknown
+     * slugs are left as written.
+     */
+    private function renderEmbeds(string $html): string
+    {
+        if (! preg_match_all('/'.self::EMBED.'/', $html, $matches)) {
+            return $html;
+        }
+
+        $embeds = Embed::whereIn('slug', array_unique($matches[1]))->get()->keyBy('slug');
+        $render = function (array $m) use ($embeds) {
+            $embed = $embeds[$m[1]] ?? null;
+
+            return $embed
+                ? trim(Blade::render('<x-embed-frame :embed="$embed" />', ['embed' => $embed]))
+                : $m[0];
+        };
+
+        // An embed alone on its line first, so it isn't left inside a <p>.
+        $html = preg_replace_callback('/<p>\s*'.self::EMBED.'\s*<\/p>/', $render, $html);
+
+        return preg_replace_callback('/'.self::EMBED.'/', $render, $html);
     }
 
     private function pathFor(Note $note): string

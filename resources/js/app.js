@@ -49,3 +49,20 @@ window.createNoteEditor = function (textarea, wire) {
         },
     };
 };
+
+/**
+ * Grow each embedded page's iframe to fit its content. The frames are
+ * sandboxed on an opaque origin, so they can't be measured from here; the
+ * script injected by EmbedService reports the height instead.
+ */
+window.addEventListener('message', (event) => {
+    const height = event.data?.rednotesEmbedHeight;
+
+    if (typeof height !== 'number') return;
+
+    for (const frame of document.querySelectorAll('iframe[data-embed]')) {
+        if (frame.contentWindow === event.source) {
+            frame.style.height = `${Math.min(Math.max(height, 150), 5000)}px`;
+        }
+    }
+});
