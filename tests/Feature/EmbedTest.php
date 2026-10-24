@@ -17,7 +17,7 @@ test('the raw page is served sandboxed, with its scripts intact', function () {
     $response = $this->get(route('embeds.raw', $embed));
 
     $response->assertOk();
-    $response->assertHeader('Content-Security-Policy', 'sandbox '.EmbedService::SANDBOX);
+    $response->assertHeader('Content-Security-Policy', 'sandbox '.EmbedService::SANDBOX."; frame-ancestors 'self'");
     $response->assertSee('<script>let a = 1;</script>', false);
     $response->assertSee('rednotesEmbedHeight', false);
     expect(EmbedService::SANDBOX)->not->toContain('allow-same-origin');
@@ -30,7 +30,7 @@ test('guests can view an embed inside the app layout but not its source editor',
 
     $this->get(route('embeds.show', $embed))
         ->assertOk()
-        ->assertSee(route('embeds.raw', $embed), false)
+        ->assertSee('src="'.route('embeds.raw', $embed, false).'?v=', false)
         ->assertDontSee('<textarea', false);
 });
 
@@ -88,7 +88,7 @@ test('notes render {{embed:slug}} as a sandboxed iframe', function () {
     $html = app(MarkdownService::class)->toHtml("Intro\n\n{{embed:{$embed->slug}}}\n\n{{embed:missing}}");
 
     expect($html)
-        ->toContain('<iframe data-embed src="'.route('embeds.raw', $embed))
+        ->toContain('<iframe data-embed src="'.route('embeds.raw', $embed, false))
         ->toContain('sandbox="'.EmbedService::SANDBOX.'"')
         ->toContain('title="Sim #1"')
         ->toContain('{{embed:missing}}');
