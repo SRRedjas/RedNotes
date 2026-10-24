@@ -1,9 +1,14 @@
 <?php
 
 use App\Http\Controllers\EmbedController;
+use App\Models\Note;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', function () {
+    $wikiNotes = Note::with('tags', 'user')->where('visibility', 'public')->latest('updated_at')->take(6)->get();
+
+    return view('welcome', compact('wikiNotes'));
+})->name('home');
 
 // Public wiki: readable by anyone, without logging in. Editing/creating
 // stays gated behind auth checks inside the components themselves so
